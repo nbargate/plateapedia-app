@@ -10,7 +10,7 @@ type Plate = {
   serial: string | null
 }
 
-export default function UserPublicPage({ params }: { params: { ownerId: string } }) {
+export default function UserPublicPage({ params }: any) {
   const supabase = getSupabaseBrowser()
   const ownerId = params.ownerId
   const [plates, setPlates] = useState<Plate[]>([])
