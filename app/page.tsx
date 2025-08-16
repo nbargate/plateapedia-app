@@ -201,16 +201,54 @@ export default function Home() {
             <button type="submit">Send magic link</button>
           </form>
         </section>
+) : (
+  <section>
+    <p>Signed in. <button onClick={signOut}>Sign out</button></p>
+
+    <div style={{ margin: '8px 0 16px 0' }}>
+      {handle ? (
+        <p style={{ marginBottom: 8 }}>
+          Your public page: <a href={`/u/${handle}`}>{`/u/${handle}`}</a>
+        </p>
       ) : (
-        <section>
-          <p>Signed in. <button onClick={signOut}>Sign out</button></p>
-          
-          {userId && (
-            <p style={{ marginTop: 8 }}>
-              Your public page:{' '}
-              <a href={`/u/${userId}`}>{`/u/${userId}`}</a>
-            </p>
-          )}
+        <p style={{ marginBottom: 8, color: '#666' }}>
+          Choose a handle to get your public link.
+        </p>
+      )}
+
+      <form
+        onSubmit={async (e) => {
+          e.preventDefault();
+          if (!userId) return;
+          if (!handle.trim()) return;
+          setSavingHandle(true);
+          const { error } = await supabase
+            .from('profiles')
+            .update({ handle: handle.trim() })
+            .eq('id', userId);
+          setSavingHandle(false);
+          if (error) {
+            alert(`Error saving handle: ${error.message}`);
+          } else {
+            alert('Handle saved ✅');
+          }
+        }}
+        style={{ display: 'flex', gap: 8 }}
+      >
+        <input
+          placeholder="Choose a handle (e.g., nathan)"
+          value={handle}
+          onChange={(e) => setHandle(e.target.value)}
+          style={{ flex: 1, padding: 8 }}
+          required
+        />
+        <button type="submit" disabled={savingHandle}>
+          {savingHandle ? 'Saving…' : 'Save handle'}
+        </button>
+      </form>
+    </div>
+
+    <h2>Add a plate</h2>
           <h2>Add a plate</h2>
           <form onSubmit={addPlate} style={{ display: 'grid', gap: 8 }}>
             <input
