@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getSupabaseBrowser } from '../lib/supabaseClient'
+import { getSupabaseBrowser } from '../../lib/supabaseClient'
 
 type Plate = {
   id: string
