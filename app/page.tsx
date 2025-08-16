@@ -119,6 +119,13 @@ export default function Home() {
       ) : (
         <section>
           <p>Signed in. <button onClick={signOut}>Sign out</button></p>
+          
+          {userId && (
+            <p style={{ marginTop: 8 }}>
+              Your public page:{' '}
+              <a href={`/u/${userId}`}>{`/u/${userId}`}</a>
+            </p>
+          )}
           <h2>Add a plate</h2>
           <form onSubmit={addPlate} style={{ display: 'grid', gap: 8 }}>
             <input
