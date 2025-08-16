@@ -2,10 +2,6 @@
 import { useEffect, useState } from 'react'
 import { getSupabaseBrowser } from '../lib/supabaseClient'
 
-export default function Home() {
-  const supabase = getSupabaseBrowser()
-
-
 type Plate = {
   id: string
   country_code: string
@@ -16,6 +12,8 @@ type Plate = {
 }
 
 export default function Home() {
+  const supabase = getSupabaseBrowser()
+
   const [email, setEmail] = useState('')
   const [userId, setUserId] = useState<string | null>(null)
   const [plates, setPlates] = useState<Plate[]>([])
@@ -123,22 +121,36 @@ export default function Home() {
           <p>Signed in. <button onClick={signOut}>Sign out</button></p>
           <h2>Add a plate</h2>
           <form onSubmit={addPlate} style={{ display: 'grid', gap: 8 }}>
-            <input placeholder="Country code (e.g., US, CA, DE)"
-                   value={form.country_code}
-                   onChange={(e) => setForm({ ...form, country_code: e.target.value })} required />
-            <input placeholder="Region/state (e.g., NY)"
-                   value={form.region_code}
-                   onChange={(e) => setForm({ ...form, region_code: e.target.value })} />
-            <input type="number" placeholder="Year"
-                   value={form.year}
-                   onChange={(e) => setForm({ ...form, year: e.target.value })} />
-            <input placeholder="Serial"
-                   value={form.serial}
-                   onChange={(e) => setForm({ ...form, serial: e.target.value })} />
-            <label><input type="checkbox"
-                          checked={form.is_public}
-                          onChange={(e) => setForm({ ...form, is_public: e.target.checked })} />
-              {' '}Public</label>
+            <input
+              placeholder="Country code (e.g., US, CA, DE)"
+              value={form.country_code}
+              onChange={(e) => setForm({ ...form, country_code: e.target.value })}
+              required
+            />
+            <input
+              placeholder="Region/state (e.g., NY)"
+              value={form.region_code}
+              onChange={(e) => setForm({ ...form, region_code: e.target.value })}
+            />
+            <input
+              type="number"
+              placeholder="Year"
+              value={form.year}
+              onChange={(e) => setForm({ ...form, year: e.target.value })}
+            />
+            <input
+              placeholder="Serial"
+              value={form.serial}
+              onChange={(e) => setForm({ ...form, serial: e.target.value })}
+            />
+            <label>
+              <input
+                type="checkbox"
+                checked={form.is_public}
+                onChange={(e) => setForm({ ...form, is_public: e.target.checked })}
+              />{' '}
+              Public
+            </label>
             <button type="submit">Save plate</button>
           </form>
         </section>
@@ -146,9 +158,12 @@ export default function Home() {
 
       <h2 style={{ marginTop: 32 }}>{userId ? 'My plates' : 'Recent public plates'}</h2>
       <ul>
-        {plates.map(p => (
+        {plates.map((p) => (
           <li key={p.id}>
-            {p.country_code}{p.region_code ? `-${p.region_code}` : ''}{p.year ? ` ${p.year}` : ''}{p.serial ? ` — ${p.serial}` : ''}
+            {p.country_code}
+            {p.region_code ? `-${p.region_code}` : ''}
+            {p.year ? ` ${p.year}` : ''}
+            {p.serial ? ` — ${p.serial}` : ''}
             {p.is_public ? ' (public)' : ''}
           </li>
         ))}
