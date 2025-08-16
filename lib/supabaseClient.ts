@@ -1,5 +1,5 @@
 'use client'
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 let browserClient: SupabaseClient | null = null
 
