@@ -1,103 +1,156 @@
-import Image from "next/image";
+'use client'
+import { useEffect, useState } from 'react'
+import { supabase } from '../lib/supabaseClient'
+
+type Plate = {
+  id: string
+  country_code: string
+  region_code: string | null
+  year: number | null
+  serial: string | null
+  is_public: boolean
+}
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [email, setEmail] = useState('')
+  const [userId, setUserId] = useState<string | null>(null)
+  const [plates, setPlates] = useState<Plate[]>([])
+  const [form, setForm] = useState({
+    country_code: '',
+    region_code: '',
+    year: '',
+    serial: '',
+    is_public: false
+  })
+  const [msg, setMsg] = useState<string | null>(null)
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+  useEffect(() => {
+    const init = async () => {
+      const { data } = await supabase.auth.getUser()
+      setUserId(data.user?.id ?? null)
+      if (data.user) loadMyPlates()
+      else loadPublicPlates()
+    }
+    init()
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      const uid = session?.user?.id ?? null
+      setUserId(uid)
+      if (uid) loadMyPlates()
+      else loadPublicPlates()
+    })
+    return () => sub.subscription.unsubscribe()
+  }, [])
+
+  async function loadMyPlates() {
+    const { data } = await supabase
+      .from('plates')
+      .select('id,country_code,region_code,year,serial,is_public')
+      .order('created_at', { ascending: false })
+    setPlates(data ?? [])
+  }
+
+  async function loadPublicPlates() {
+    const { data } = await supabase
+      .from('plates')
+      .select('id,country_code,region_code,year,serial,is_public')
+      .eq('is_public', true)
+      .order('created_at', { ascending: false })
+      .limit(20)
+    setPlates(data ?? [])
+  }
+
+  async function signInWithEmail(e: React.FormEvent) {
+    e.preventDefault()
+    setMsg(null)
+    const { error } = await supabase.auth.signInWithOtp({ email })
+    setMsg(error ? `Error: ${error.message}` : 'Check your email for the magic link.')
+  }
+
+  async function signOut() {
+    await supabase.auth.signOut()
+  }
+
+  async function addPlate(e: React.FormEvent) {
+    e.preventDefault()
+    if (!userId) {
+      setMsg('Please sign in first.')
+      return
+    }
+    const payload = {
+      owner_id: userId,
+      country_code: form.country_code.trim(),
+      region_code: form.region_code.trim() || null,
+      year: form.year ? Number(form.year) : null,
+      serial: form.serial.trim() || null,
+      is_public: form.is_public
+    }
+    const { error } = await supabase.from('plates').insert(payload)
+    if (error) {
+      setMsg(`Error: ${error.message}`)
+    } else {
+      setMsg('Saved ✅')
+      setForm({ country_code: '', region_code: '', year: '', serial: '', is_public: false })
+      loadMyPlates()
+    }
+  }
+
+  return (
+    <main style={{ maxWidth: 720, margin: '40px auto', padding: 16 }}>
+      <h1>Plateapedia (MVP)</h1>
+
+      {!userId ? (
+        <section>
+          <h2>Sign in</h2>
+          <form onSubmit={signInWithEmail} style={{ display: 'flex', gap: 8 }}>
+            <input
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              style={{ flex: 1, padding: 8 }}
+              required
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+            <button type="submit">Send magic link</button>
+          </form>
+        </section>
+      ) : (
+        <section>
+          <p>Signed in. <button onClick={signOut}>Sign out</button></p>
+          <h2>Add a plate</h2>
+          <form onSubmit={addPlate} style={{ display: 'grid', gap: 8 }}>
+            <input placeholder="Country code (e.g., US, CA, DE)"
+                   value={form.country_code}
+                   onChange={(e) => setForm({ ...form, country_code: e.target.value })} required />
+            <input placeholder="Region/state (e.g., NY)"
+                   value={form.region_code}
+                   onChange={(e) => setForm({ ...form, region_code: e.target.value })} />
+            <input type="number" placeholder="Year"
+                   value={form.year}
+                   onChange={(e) => setForm({ ...form, year: e.target.value })} />
+            <input placeholder="Serial"
+                   value={form.serial}
+                   onChange={(e) => setForm({ ...form, serial: e.target.value })} />
+            <label><input type="checkbox"
+                          checked={form.is_public}
+                          onChange={(e) => setForm({ ...form, is_public: e.target.checked })} />
+              {' '}Public</label>
+            <button type="submit">Save plate</button>
+          </form>
+        </section>
+      )}
+
+      <h2 style={{ marginTop: 32 }}>{userId ? 'My plates' : 'Recent public plates'}</h2>
+      <ul>
+        {plates.map(p => (
+          <li key={p.id}>
+            {p.country_code}{p.region_code ? `-${p.region_code}` : ''}{p.year ? ` ${p.year}` : ''}{p.serial ? ` — ${p.serial}` : ''}
+            {p.is_public ? ' (public)' : ''}
+          </li>
+        ))}
+      </ul>
+
+      {msg && <p style={{ marginTop: 16 }}>{msg}</p>}
+    </main>
+  )
 }
