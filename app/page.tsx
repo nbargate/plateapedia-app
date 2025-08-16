@@ -25,6 +25,52 @@ export default function Home() {
     is_public: false
   })
   const [msg, setMsg] = useState<string | null>(null)
+  const [msg, setMsg] = useState<string | null>(null)
+
+  // ⬇️ NEW lines for handle support
+  const [handle, setHandle] = useState<string>('')
+  const [savingHandle, setSavingHandle] = useState(false)
+  // ⬆️ END NEW
+
+      {/* Public profile link + handle editor */}
+      <div style={{ margin: '8px 0 16px 0' }}>
+      <p style={{ marginBottom: 8 }}>
+        Your public page:{' '}
+        <a href={`/u/${handle || userId}`}>{`/u/${handle || userId}`}</a>
+      </p>
+
+      <form
+        onSubmit={async (e) => {
+          e.preventDefault()
+          if (!userId) return
+          if (!handle.trim()) return
+          setSavingHandle(true)
+          const { error } = await supabase
+            .from('profiles')
+            .update({ handle: handle.trim() })
+            .eq('id', userId)
+          setSavingHandle(false)
+          if (error) {
+            alert(`Error saving handle: ${error.message}`)
+          } else {
+            alert('Handle saved ✅')
+          }
+        }}
+        style={{ display: 'flex', gap: 8 }}
+      >
+        <input
+          placeholder="Choose a handle (e.g., nathan)"
+          value={handle}
+          onChange={(e) => setHandle(e.target.value)}
+          style={{ flex: 1, padding: 8 }}
+          required
+        />
+        <button type="submit" disabled={savingHandle}>
+          {savingHandle ? 'Saving…' : 'Save handle'}
+        </button>
+      </form>
+    </div>
+
 
   useEffect(() => {
     const init = async () => {
