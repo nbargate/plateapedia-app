@@ -175,7 +175,16 @@ export default function Home() {
               <input
                 placeholder="Choose a handle (e.g., nathan)"
                 value={handle}
-                onChange={(e) => setHandle(e.target.value)}
+                onChange={(e) => {
+                  const raw = e.target.value
+                  const cleaned = raw
+                    .toLowerCase()
+                    .replace(/\s+/g, '-')     // spaces -> hyphens
+                    .replace(/[^a-z0-9-]/g, '') // drop invalid chars
+                    .replace(/-+/g, '-')      // collapse ---
+                    .replace(/^-+|-+$/g, '')  // trim leading/trailing -
+                  setHandle(cleaned)
+                }}
                 style={{ flex: 1, padding: 8 }}
                 required
               />
