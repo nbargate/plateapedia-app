@@ -119,17 +119,36 @@ export default function Home() {
   async function saveHandle(e: React.FormEvent) {
     e.preventDefault()
     if (!userId) return
-    const clean = handle.trim()
-    if (!clean) return
+
+    // normalize again on submit (defensive)
+    const clean = handle
+      .toLowerCase()
+      .replace(/\s+/g, '-')      // spaces -> hyphens
+      .replace(/[^a-z0-9-]/g, '') // only a–z 0–9 -
+      .replace(/-+/g, '-')       // collapse ---
+      .replace(/^-+|-+$/g, '')   // trim leading/trailing -
+
+    if (!clean) {
+      alert('Please enter a valid handle.')
+      return
+    }
+
     setSavingHandle(true)
     const { error } = await supabase
       .from('profiles')
       .update({ handle: clean })
       .eq('id', userId)
     setSavingHandle(false)
+
     if (error) {
-      alert(`Error saving handle: ${error.message}`)
+      // Postgres unique violation code
+      if ((error as any).code === '23505') {
+        alert('That handle is already taken. Try another.')
+      } else {
+        alert(`Error saving handle: ${error.message}`)
+      }
     } else {
+      setHandle(clean)
       alert('Handle saved ✅')
     }
   }
