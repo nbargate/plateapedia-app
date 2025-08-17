@@ -14,6 +14,7 @@ type Plate = {
 export default function Home() {
   const supabase = getSupabaseBrowser()
 
+  // --- state ---
   const [email, setEmail] = useState('')
   const [userId, setUserId] = useState<string | null>(null)
   const [plates, setPlates] = useState<Plate[]>([])
@@ -22,101 +23,33 @@ export default function Home() {
     region_code: '',
     year: '',
     serial: '',
-    is_public: false
+    is_public: false,
   })
   const [msg, setMsg] = useState<string | null>(null)
-  const [msg, setMsg] = useState<string | null>(null)
 
-  // ⬇️ NEW lines for handle support
+  // handle-related state
   const [handle, setHandle] = useState<string>('')
   const [savingHandle, setSavingHandle] = useState(false)
-  // ⬆️ END NEW
 
-         {/* Public profile link + handle editor */}
-    <div style={{ margin: '8px 0 16px 0' }}>
-    {handle ? (
-      <p style={{ marginBottom: 8 }}>
-        Your public page:{' '}
-        <a href={`/u/${handle}`}>{`/u/${handle}`}</a>
-      </p>
-    ) : (
-      <p style={{ marginBottom: 8, color: '#666' }}>
-        Choose a handle to get your public link.
-      </p>
-    )}
-
-    <form
-      onSubmit={async (e) => {
-        e.preventDefault()
-        if (!userId) return
-        if (!handle.trim()) return
-        setSavingHandle(true)
-        const { error } = await supabase
-          .from('profiles')
-          .update({ handle: handle.trim() })
-          .eq('id', userId)
-        setSavingHandle(false)
-        if (error) {
-          alert(`Error saving handle: ${error.message}`)
-        } else {
-          alert('Handle saved ✅')
-        }
-      }}
-      style={{ display: 'flex', gap: 8 }}
-    >
-      <input
-        placeholder="Choose a handle (e.g., nathan)"
-        value={handle}
-        onChange={(e) => setHandle(e.target.value)}
-        style={{ flex: 1, padding: 8 }}
-        required
-      />
-      <button type="submit" disabled={savingHandle}>
-        {savingHandle ? 'Saving…' : 'Save handle'}
-      </button>
-    </form>
-  </div>
-
-
-      <form
-        onSubmit={async (e) => {
-          e.preventDefault()
-          if (!userId) return
-          if (!handle.trim()) return
-          setSavingHandle(true)
-          const { error } = await supabase
-            .from('profiles')
-            .update({ handle: handle.trim() })
-            .eq('id', userId)
-          setSavingHandle(false)
-          if (error) {
-            alert(`Error saving handle: ${error.message}`)
-          } else {
-            alert('Handle saved ✅')
-          }
-        }}
-        style={{ display: 'flex', gap: 8 }}
-      >
-        <input
-          placeholder="Choose a handle (e.g., nathan)"
-          value={handle}
-          onChange={(e) => setHandle(e.target.value)}
-          style={{ flex: 1, padding: 8 }}
-          required
-        />
-        <button type="submit" disabled={savingHandle}>
-          {savingHandle ? 'Saving…' : 'Save handle'}
-        </button>
-      </form>
-    </div>
-
-
+  // --- effects ---
   useEffect(() => {
     const init = async () => {
       const { data } = await supabase.auth.getUser()
-      setUserId(data.user?.id ?? null)
-      if (data.user) loadMyPlates()
-      else loadPublicPlates()
+      const uid = data.user?.id ?? null
+      setUserId(uid)
+
+      // load handle for this user
+      if (uid) {
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('handle')
+          .eq('id', uid)
+          .single()
+        setHandle(prof?.handle ?? '')
+      }
+
+      if (uid) await loadMyPlates()
+      else await loadPublicPlates()
     }
     init()
 
@@ -129,6 +62,7 @@ export default function Home() {
     return () => sub.subscription.unsubscribe()
   }, [])
 
+  // --- helpers ---
   async function loadMyPlates() {
     const { data } = await supabase
       .from('plates')
@@ -170,7 +104,7 @@ export default function Home() {
       region_code: form.region_code.trim() || null,
       year: form.year ? Number(form.year) : null,
       serial: form.serial.trim() || null,
-      is_public: form.is_public
+      is_public: form.is_public,
     }
     const { error } = await supabase.from('plates').insert(payload)
     if (error) {
@@ -182,6 +116,25 @@ export default function Home() {
     }
   }
 
+  async function saveHandle(e: React.FormEvent) {
+    e.preventDefault()
+    if (!userId) return
+    const clean = handle.trim()
+    if (!clean) return
+    setSavingHandle(true)
+    const { error } = await supabase
+      .from('profiles')
+      .update({ handle: clean })
+      .eq('id', userId)
+    setSavingHandle(false)
+    if (error) {
+      alert(`Error saving handle: ${error.message}`)
+    } else {
+      alert('Handle saved ✅')
+    }
+  }
+
+  // --- render ---
   return (
     <main style={{ maxWidth: 720, margin: '40px auto', padding: 16 }}>
       <h1>Plateapedia (MVP)</h1>
@@ -201,54 +154,37 @@ export default function Home() {
             <button type="submit">Send magic link</button>
           </form>
         </section>
-) : (
-  <section>
-    <p>Signed in. <button onClick={signOut}>Sign out</button></p>
-
-    <div style={{ margin: '8px 0 16px 0' }}>
-      {handle ? (
-        <p style={{ marginBottom: 8 }}>
-          Your public page: <a href={`/u/${handle}`}>{`/u/${handle}`}</a>
-        </p>
       ) : (
-        <p style={{ marginBottom: 8, color: '#666' }}>
-          Choose a handle to get your public link.
-        </p>
-      )}
+        <section>
+          <p>
+            Signed in. <button onClick={signOut}>Sign out</button>
+          </p>
 
-      <form
-        onSubmit={async (e) => {
-          e.preventDefault();
-          if (!userId) return;
-          if (!handle.trim()) return;
-          setSavingHandle(true);
-          const { error } = await supabase
-            .from('profiles')
-            .update({ handle: handle.trim() })
-            .eq('id', userId);
-          setSavingHandle(false);
-          if (error) {
-            alert(`Error saving handle: ${error.message}`);
-          } else {
-            alert('Handle saved ✅');
-          }
-        }}
-        style={{ display: 'flex', gap: 8 }}
-      >
-        <input
-          placeholder="Choose a handle (e.g., nathan)"
-          value={handle}
-          onChange={(e) => setHandle(e.target.value)}
-          style={{ flex: 1, padding: 8 }}
-          required
-        />
-        <button type="submit" disabled={savingHandle}>
-          {savingHandle ? 'Saving…' : 'Save handle'}
-        </button>
-      </form>
-    </div>
+          <div style={{ margin: '8px 0 16px 0' }}>
+            {handle ? (
+              <p style={{ marginBottom: 8 }}>
+                Your public page: <a href={`/u/${handle}`}>{`/u/${handle}`}</a>
+              </p>
+            ) : (
+              <p style={{ marginBottom: 8, color: '#666' }}>
+                Choose a handle to get your public link.
+              </p>
+            )}
 
-    <h2>Add a plate</h2>
+            <form onSubmit={saveHandle} style={{ display: 'flex', gap: 8 }}>
+              <input
+                placeholder="Choose a handle (e.g., nathan)"
+                value={handle}
+                onChange={(e) => setHandle(e.target.value)}
+                style={{ flex: 1, padding: 8 }}
+                required
+              />
+              <button type="submit" disabled={savingHandle}>
+                {savingHandle ? 'Saving…' : 'Save handle'}
+              </button>
+            </form>
+          </div>
+
           <h2>Add a plate</h2>
           <form onSubmit={addPlate} style={{ display: 'grid', gap: 8 }}>
             <input
