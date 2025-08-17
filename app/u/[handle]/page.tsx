@@ -31,8 +31,9 @@ export default function HandlePublicPage({ params }: any) {
       const { data: prof } = await supabase
         .from('profiles')
         .select('id,handle,display_name,is_public')
-        .eq('handle', handle)
+        .ilike('handle', handle) // case-insensitive match
         .single()
+
 
       if (!prof) {
         setStatus('notfound')
