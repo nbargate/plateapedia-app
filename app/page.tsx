@@ -10,6 +10,11 @@ type Plate = {
   serial: string | null
   is_public: boolean
 }
+type Collection = {
+  id: string
+  name: string
+  description: string | null
+}
 
 export default function Home() {
   const supabase = getSupabaseBrowser()
