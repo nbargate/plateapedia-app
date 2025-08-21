@@ -249,6 +249,64 @@ export default function Home() {
               </button>
             </form>
           </div>
+    <h2>Collections</h2>
+
+    <form onSubmit={addCollection} style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
+      <input
+        placeholder="Collection name (e.g., 1970s US States)"
+        value={newCol.name}
+        onChange={(e) => setNewCol({ ...newCol, name: e.target.value })}
+        required
+      />
+      <input
+        placeholder="Description (optional)"
+        value={newCol.description}
+        onChange={(e) => setNewCol({ ...newCol, description: e.target.value })}
+      />
+      <button type="submit">Create collection</button>
+    </form>
+
+    {collections.length === 0 ? (
+      <p style={{ color: '#666', marginBottom: 16 }}>No collections yet.</p>
+    ) : (
+      <ul style={{ marginBottom: 16 }}>
+        {collections.map((c) => (
+          <li key={c.id}>
+            <strong>{c.name}</strong>
+            {c.description ? ` — ${c.description}` : ''}
+          </li>
+        ))}
+      </ul>
+    )}
+              <h2>Collections</h2>
+
+              <form onSubmit={addCollection} style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
+                <input
+                  placeholder="Collection name (e.g., 1970s US States)"
+                  value={newCol.name}
+                  onChange={(e) => setNewCol({ ...newCol, name: e.target.value })}
+                  required
+                />
+                <input
+                  placeholder="Description (optional)"
+                  value={newCol.description}
+                  onChange={(e) => setNewCol({ ...newCol, description: e.target.value })}
+                />
+                <button type="submit">Create collection</button>
+              </form>
+
+              {collections.length === 0 ? (
+                <p style={{ color: '#666', marginBottom: 16 }}>No collections yet.</p>
+              ) : (
+                <ul style={{ marginBottom: 16 }}>
+                  {collections.map((c) => (
+                    <li key={c.id}>
+                      <strong>{c.name}</strong>
+                      {c.description ? ` — ${c.description}` : ''}
+                    </li>
+                  ))}
+                </ul>
+              )}
 
           <h2>Add a plate</h2>
           <form onSubmit={addPlate} style={{ display: 'grid', gap: 8 }}>
