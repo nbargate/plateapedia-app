@@ -132,19 +132,36 @@ export default function Home() {
   }
   async function assignPlateToCollection(plateId: string, collectionId: string) {
     if (!userId) {
-      setMsg('Please sign in first.')
+      const m = 'Please sign in first.'
+      setMsg(m)
+      alert(m)
       return
     }
+  
     const { error } = await supabase.from('plates_collections').insert({
       plate_id: plateId,
       collection_id: collectionId,
       owner_id: userId,
     })
+  
     if (error) {
-      setMsg(`Error assigning to collection: ${error.message}`)
+      // Duplicate (already assigned) will be a Postgres unique violation 23505
+      if ((error as any).code === '23505') {
+        const m = 'That plate is already in this collection.'
+        setMsg(m)
+        alert(m)
+      } else {
+        const m = `Error assigning to collection: ${error.message}`
+        setMsg(m)
+        alert(m)
+      }
     } else {
-      setMsg('Plate added to collection ✅')
+      const m = 'Plate added to collection ✅'
+      setMsg(m)
+      alert(m)
     }
+  }
+  
   }
   
   async function addPlate(e: React.FormEvent) {
