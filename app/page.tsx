@@ -310,7 +310,7 @@ export default function Home() {
             <ul style={{ marginBottom: 16 }}>
               {collections.map((c) => (
                 <li key={c.id}>
-                  <strong>{c.name}</strong>
+                  <strong><a href={`/c/${c.id}`}>{c.name}</a></strong>
                   {c.description ? ` — ${c.description}` : ''}
                 </li>
               ))}
