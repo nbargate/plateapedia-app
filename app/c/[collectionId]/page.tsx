@@ -18,9 +18,9 @@ type Collection = {
   description: string | null
 }
 
-export default function CollectionPage({ params }: { params: { collectionId: string } }) {
+export default function CollectionPage({ params }: any) {
   const supabase = getSupabaseBrowser()
-  const collectionId = params.collectionId
+  const collectionId: string = params?.collectionId
 
   const [userId, setUserId] = useState<string | null>(null)
   const [collection, setCollection] = useState<Collection | null>(null)
