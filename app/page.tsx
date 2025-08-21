@@ -33,6 +33,8 @@ export default function Home() {
   const [msg, setMsg] = useState<string | null>(null)
   const [collections, setCollections] = useState<Collection[]>([])
   const [newCol, setNewCol] = useState({ name: '', description: '' })
+  const [selectedCollectionByPlate, setSelectedCollectionByPlate] = useState<Record<string, string>>({})
+
   
   // handle-related state
   const [handle, setHandle] = useState<string>('')
