@@ -57,6 +57,8 @@ export default function Home() {
 
       if (uid) await loadMyPlates()
       else await loadPublicPlates()
+      if (uid) await loadCollections()
+
     }
     init()
 
@@ -65,6 +67,7 @@ export default function Home() {
       setUserId(uid)
       if (uid) loadMyPlates()
       else loadPublicPlates()
+      if (uid) loadCollections()
     })
     return () => sub.subscription.unsubscribe()
   }, [])
