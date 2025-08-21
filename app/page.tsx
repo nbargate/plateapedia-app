@@ -87,7 +87,34 @@ export default function Home() {
       .limit(20)
     setPlates(data ?? [])
   }
-
+  async function loadCollections() {
+    const { data } = await supabase
+      .from('collections')
+      .select('id, name, description, owner_id')
+      .order('created_at', { ascending: false })
+    setCollections(data ?? [])
+  }
+  async function addCollection(e: React.FormEvent) {
+    e.preventDefault()
+    if (!userId) {
+      setMsg('Please sign in first.')
+      return
+    }
+    const payload = {
+      owner_id: userId,
+      name: newCol.name.trim(),
+      description: newCol.description.trim()
+    }
+    const { error } = await supabase.from('collections').insert(payload)
+    if (error) {
+      setMsg(`Error: ${error.message}`)
+    } else {
+      setMsg('Collection saved ✅')
+      setNewCol({ name: '', description: '' })
+      loadCollections()
+    }
+  }
+  
   async function signInWithEmail(e: React.FormEvent) {
     e.preventDefault()
     setMsg(null)
