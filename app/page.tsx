@@ -362,6 +362,20 @@ export default function Home() {
              </option>
            ))}
          </select>
+         <button
+          onClick={() => {
+            const colId = selectedCollectionByPlate[p.id]
+            if (!colId) {
+              setMsg('Please choose a collection first.')
+              return
+            }
+            assignPlateToCollection(p.id, colId)
+          }}
+          style={{ marginLeft: 8 }}
+          disabled={!selectedCollectionByPlate[p.id]}
+        >
+          Add to collection
+        </button>
        </li>
        
         ))}
