@@ -31,7 +31,9 @@ export default function Home() {
     is_public: false,
   })
   const [msg, setMsg] = useState<string | null>(null)
-
+  const [collections, setCollections] = useState<Collection[]>([])
+  const [newCol, setNewCol] = useState({ name: '', description: '' })
+  
   // handle-related state
   const [handle, setHandle] = useState<string>('')
   const [savingHandle, setSavingHandle] = useState(false)
