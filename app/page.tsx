@@ -351,52 +351,59 @@ export default function Home() {
         </section>
       )}
 
-      <h2 style={{ marginTop: 32 }}>{userId ? 'My plates' : 'Recent public plates'}</h2>
-      <ul>
-        {plates.map((p) => (
-         <li key={p.id}>
-         {p.country_code}
-         {p.region_code ? `-${p.region_code}` : ''}
-         {p.year ? ` ${p.year}` : ''}
-         {p.serial ? ` — ${p.serial}` : ''}
-         {p.is_public ? ' (public)' : ''}
-       
-         {/* Dropdown to choose collection */}
-         <select
-           value={selectedCollectionByPlate[p.id] || ''}
-           onChange={(e) =>
-             setSelectedCollectionByPlate({
-               ...selectedCollectionByPlate,
-               [p.id]: e.target.value
-             })
-           }
-           style={{ marginLeft: 8 }}
-         >
-           <option value="">— Select collection —</option>
-           {collections.map((c) => (
-             <option key={c.id} value={c.id}>
-               {c.name}
-             </option>
-           ))}
-         </select>
-         <button
-          onClick={() => {
-            const colId = selectedCollectionByPlate[p.id]
-            if (!colId) {
-              setMsg('Please choose a collection first.')
-              return
+<ul>
+  {plates.map((p) => (
+    <li key={p.id} style={{ marginBottom: 8 }}>
+      {/* Plate summary */}
+      <span>
+        {p.country_code}
+        {p.region_code ? `-${p.region_code}` : ''}
+        {p.year ? ` ${p.year}` : ''}
+        {p.serial ? ` — ${p.serial}` : ''}
+        {p.is_public ? ' (public)' : ''}
+      </span>
+
+      {/* Collection assign UI (only if you have collections) */}
+      {collections.length > 0 && (
+        <div style={{ marginTop: 4 }}>
+          <select
+            value={selectedCollectionByPlate[p.id] || ''}
+            onChange={(e) =>
+              setSelectedCollectionByPlate({
+                ...selectedCollectionByPlate,
+                [p.id]: e.target.value,
+              })
             }
-            assignPlateToCollection(p.id, colId)
-          }}
-          style={{ marginLeft: 8 }}
-          disabled={!selectedCollectionByPlate[p.id]}
-        >
-          Add to collection
-        </button>
-       </li>
-       
-        ))}
-      </ul>
+          >
+            <option value="">— Select collection —</option>
+            {collections.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+
+          <button
+            onClick={() => {
+              const colId = selectedCollectionByPlate[p.id]
+              if (!colId) {
+                setMsg('Please choose a collection first.')
+                alert('Please choose a collection first.')
+                return
+              }
+              assignPlateToCollection(p.id, colId)
+            }}
+            style={{ marginLeft: 8 }}
+            disabled={!selectedCollectionByPlate[p.id]}
+          >
+            Add to collection
+          </button>
+        </div>
+      )}
+    </li>
+  ))}
+</ul>
+
 
       {msg && <p style={{ marginTop: 16 }}>{msg}</p>}
     </main>
