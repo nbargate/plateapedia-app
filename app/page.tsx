@@ -128,7 +128,23 @@ export default function Home() {
   async function signOut() {
     await supabase.auth.signOut()
   }
-
+  async function assignPlateToCollection(plateId: string, collectionId: string) {
+    if (!userId) {
+      setMsg('Please sign in first.')
+      return
+    }
+    const { error } = await supabase.from('plates_collections').insert({
+      plate_id: plateId,
+      collection_id: collectionId,
+      owner_id: userId,
+    })
+    if (error) {
+      setMsg(`Error assigning to collection: ${error.message}`)
+    } else {
+      setMsg('Plate added to collection ✅')
+    }
+  }
+  
   async function addPlate(e: React.FormEvent) {
     e.preventDefault()
     if (!userId) {
