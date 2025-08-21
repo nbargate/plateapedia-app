@@ -337,13 +337,33 @@ export default function Home() {
       <h2 style={{ marginTop: 32 }}>{userId ? 'My plates' : 'Recent public plates'}</h2>
       <ul>
         {plates.map((p) => (
-          <li key={p.id}>
-            {p.country_code}
-            {p.region_code ? `-${p.region_code}` : ''}
-            {p.year ? ` ${p.year}` : ''}
-            {p.serial ? ` — ${p.serial}` : ''}
-            {p.is_public ? ' (public)' : ''}
-          </li>
+         <li key={p.id}>
+         {p.country_code}
+         {p.region_code ? `-${p.region_code}` : ''}
+         {p.year ? ` ${p.year}` : ''}
+         {p.serial ? ` — ${p.serial}` : ''}
+         {p.is_public ? ' (public)' : ''}
+       
+         {/* Dropdown to choose collection */}
+         <select
+           value={selectedCollectionByPlate[p.id] || ''}
+           onChange={(e) =>
+             setSelectedCollectionByPlate({
+               ...selectedCollectionByPlate,
+               [p.id]: e.target.value
+             })
+           }
+           style={{ marginLeft: 8 }}
+         >
+           <option value="">— Select collection —</option>
+           {collections.map((c) => (
+             <option key={c.id} value={c.id}>
+               {c.name}
+             </option>
+           ))}
+         </select>
+       </li>
+       
         ))}
       </ul>
 
