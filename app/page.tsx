@@ -182,22 +182,40 @@ export default function Home() {
       setMsg('Please sign in first.')
       return
     }
+
     const name = newCol.name.trim()
     const description = newCol.description.trim()
+
     if (!name) return
+
+    // 🔽 Generate slug
+    const baseForSlug = (newCol.slug?.trim() || name)
+    const slug = baseForSlug
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '')
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '')
+
+
+    // 🔽 Insert into Supabase with slug + is_public
     const { error } = await supabase.from('collections').insert({
       owner_id: userId,
       name,
       description: description || null,
+      slug,
+      is_public: newCol.is_public ?? false,
     })
+
     if (error) {
       setMsg(`Error creating collection: ${error.message}`)
     } else {
       setMsg('Collection saved ✅')
-      setNewCol({ name: '', description: '' })
+      setNewCol({ name: '', description: '', is_public: false }) // reset all fields
       loadCollections()
     }
   }
+
 
   async function assignPlateToCollection(plateId: string, collectionId: string) {
     if (!userId) {
@@ -291,6 +309,7 @@ export default function Home() {
 
           {/* Collections */}
           <h2>Collections</h2>
+
           <form onSubmit={addCollection} style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
             <input
               placeholder="Collection name (e.g., 1970s US States)"
@@ -298,11 +317,14 @@ export default function Home() {
               onChange={(e) => setNewCol({ ...newCol, name: e.target.value })}
               required
             />
+
             <input
               placeholder="Description (optional)"
               value={newCol.description}
               onChange={(e) => setNewCol({ ...newCol, description: e.target.value })}
             />
+
+            {/* Optional: explicit slug (will be sanitized as you type) */}
             <input
               placeholder="Slug (e.g., 1970s-us-states)"
               value={newCol.slug}
@@ -317,12 +339,33 @@ export default function Home() {
                 setNewCol({ ...newCol, slug: cleaned })
               }}
             />
+
             <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               <input
                 type="checkbox"
                 checked={newCol.is_public}
                 onChange={(e) => setNewCol({ ...newCol, is_public: e.target.checked })}
               />
+              Make this collection public
+            </label>
+
+            <button type="submit">Create collection</button>
+          </form>
+
+          {collections.length === 0 ? (
+            <p style={{ color: '#666', marginBottom: 16 }}>No collections yet.</p>
+          ) : (
+            <ul style={{ marginBottom: 16 }}>
+              {collections.map((c) => (
+                <li key={c.id}>
+                  <strong><a href={`/c/${c.id}`}>{c.name}</a></strong>
+                  {c.description ? ` — ${c.description}` : ''}
+                  {c.is_public ? ' (public)' : ''}
+                </li>
+              ))}
+            </ul>
+          )}
+
               Make this collection public
             </label>
 
