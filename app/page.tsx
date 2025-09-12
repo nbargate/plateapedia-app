@@ -15,6 +15,8 @@ type Collection = {
   id: string
   name: string
   description: string | null
+  slug?: string | null
+  is_public?: boolean
 }
 
 export default function Home() {
@@ -39,7 +41,7 @@ export default function Home() {
 
   // collections state
   const [collections, setCollections] = useState<Collection[]>([])
-  const [newCol, setNewCol] = useState({ name: '', description: '' })
+  const [newCol, setNewCol] = useState({ name: '', description: '', slug: '', is_public: false })
   const [selectedCollectionByPlate, setSelectedCollectionByPlate] = useState<Record<string, string>>({})
 
   // effects
