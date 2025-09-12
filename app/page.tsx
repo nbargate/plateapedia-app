@@ -1,4 +1,5 @@
 'use client'
+
 import { useEffect, useState } from 'react'
 import { getSupabaseBrowser } from '../lib/supabaseClient'
 
@@ -22,10 +23,14 @@ type Collection = {
 export default function Home() {
   const supabase = getSupabaseBrowser()
 
-  // state
+  // auth + data state
   const [email, setEmail] = useState('')
   const [userId, setUserId] = useState<string | null>(null)
   const [plates, setPlates] = useState<Plate[]>([])
+  const [collections, setCollections] = useState<Collection[]>([])
+  const [selectedCollectionByPlate, setSelectedCollectionByPlate] = useState<Record<string, string>>({})
+
+  // plate form
   const [form, setForm] = useState({
     country_code: '',
     region_code: '',
@@ -33,35 +38,32 @@ export default function Home() {
     serial: '',
     is_public: false,
   })
+
+  // messages
   const [msg, setMsg] = useState<string | null>(null)
 
-  // handle state
+  // profile handle
   const [handle, setHandle] = useState<string>('')
   const [savingHandle, setSavingHandle] = useState(false)
 
-  // collections state
-  const [collections, setCollections] = useState<Collection[]>([])
+  // new collection form
   const [newCol, setNewCol] = useState({ name: '', description: '', slug: '', is_public: false })
-  const [selectedCollectionByPlate, setSelectedCollectionByPlate] = useState<Record<string, string>>({})
 
-  // effects
   useEffect(() => {
     const init = async () => {
       const { data } = await supabase.auth.getUser()
       const uid = data.user?.id ?? null
       setUserId(uid)
 
-      // load handle
       if (uid) {
+        // load handle
         const { data: prof } = await supabase
           .from('profiles')
           .select('handle')
           .eq('id', uid)
           .single()
         setHandle(prof?.handle ?? '')
-      }
 
-      if (uid) {
         await loadMyPlates()
         await loadCollections()
       } else {
@@ -83,7 +85,6 @@ export default function Home() {
     return () => sub.subscription.unsubscribe()
   }, [])
 
-  // helpers
   async function loadMyPlates() {
     const { data } = await supabase
       .from('plates')
@@ -105,7 +106,7 @@ export default function Home() {
   async function loadCollections() {
     const { data } = await supabase
       .from('collections')
-      .select('id,name,description')
+      .select('id,name,description,slug,is_public')
       .order('created_at', { ascending: false })
     setCollections(data ?? [])
   }
@@ -145,31 +146,31 @@ export default function Home() {
     }
   }
 
-  async function saveHandle(e: React.FormEvent) {
-    e.preventDefault()
-    if (!userId) return
-    const clean = handle
+  function slugify(s: string) {
+    return s
       .toLowerCase()
       .replace(/\s+/g, '-')
       .replace(/[^a-z0-9-]/g, '')
       .replace(/-+/g, '-')
       .replace(/^-+|-+$/g, '')
+  }
+
+  async function saveHandle(e: React.FormEvent) {
+    e.preventDefault()
+    if (!userId) return
+    const clean = slugify(handle)
     if (!clean) {
       alert('Please enter a valid handle.')
       return
     }
     setSavingHandle(true)
-    const { error } = await supabase
-      .from('profiles')
-      .update({ handle: clean })
-      .eq('id', userId)
+    const { error } = await supabase.from('profiles').update({ handle: clean }).eq('id', userId)
     setSavingHandle(false)
     if (error) {
-      if ((error as any).code === '23505') {
-        alert('That handle is already taken. Try another.')
-      } else {
-        alert(`Error saving handle: ${error.message}`)
-      }
+      // 23505 = unique violation
+      // @ts-ignore
+      if (error.code === '23505') alert('That handle is already taken. Try another.')
+      else alert(`Error saving handle: ${error.message}`)
     } else {
       setHandle(clean)
       alert('Handle saved ✅')
@@ -182,40 +183,28 @@ export default function Home() {
       setMsg('Please sign in first.')
       return
     }
-
     const name = newCol.name.trim()
     const description = newCol.description.trim()
-
     if (!name) return
 
-    // 🔽 Generate slug
     const baseForSlug = (newCol.slug?.trim() || name)
-    const slug = baseForSlug
-      .toLowerCase()
-      .replace(/\s+/g, '-')
-      .replace(/[^a-z0-9-]/g, '')
-      .replace(/-+/g, '-')
-      .replace(/^-+|-+$/g, '')
+    const slug = slugify(baseForSlug)
 
-
-    // 🔽 Insert into Supabase with slug + is_public
     const { error } = await supabase.from('collections').insert({
       owner_id: userId,
       name,
       description: description || null,
       slug,
-      is_public: newCol.is_public ?? false,
+      is_public: !!newCol.is_public,
     })
-
     if (error) {
       setMsg(`Error creating collection: ${error.message}`)
     } else {
       setMsg('Collection saved ✅')
-      setNewCol({ name: '', description: '', is_public: false }) // reset all fields
+      setNewCol({ name: '', description: '', slug: '', is_public: false })
       loadCollections()
     }
   }
-
 
   async function assignPlateToCollection(plateId: string, collectionId: string) {
     if (!userId) {
@@ -230,7 +219,8 @@ export default function Home() {
       owner_id: userId,
     })
     if (error) {
-      if ((error as any).code === '23505') {
+      // @ts-ignore
+      if (error.code === '23505') {
         const m = 'That plate is already in this collection.'
         setMsg(m)
         alert(m)
@@ -246,7 +236,6 @@ export default function Home() {
     }
   }
 
-  // render
   return (
     <main style={{ maxWidth: 720, margin: '40px auto', padding: 16 }}>
       <h1>Plateapedia (MVP)</h1>
@@ -268,9 +257,7 @@ export default function Home() {
         </section>
       ) : (
         <section>
-          <p>
-            Signed in. <button onClick={signOut}>Sign out</button>
-          </p>
+          <p>Signed in. <button onClick={signOut}>Sign out</button></p>
 
           {/* Handle + public link */}
           <div style={{ margin: '8px 0 16px 0' }}>
@@ -288,16 +275,7 @@ export default function Home() {
               <input
                 placeholder="Choose a handle (e.g., nathan)"
                 value={handle}
-                onChange={(e) => {
-                  const raw = e.target.value
-                  const cleaned = raw
-                    .toLowerCase()
-                    .replace(/\s+/g, '-') // spaces -> hyphens
-                    .replace(/[^a-z0-9-]/g, '') // drop invalid chars
-                    .replace(/-+/g, '-') // collapse ---
-                    .replace(/^-+|-+$/g, '') // trim leading/trailing -
-                  setHandle(cleaned)
-                }}
+                onChange={(e) => setHandle(e.target.value)}
                 style={{ flex: 1, padding: 8 }}
                 required
               />
@@ -306,69 +284,36 @@ export default function Home() {
               </button>
             </form>
           </div>
-<h2>Collections</h2>
 
-{(() => {
-  function slugify(s: string) {
-    return s
-      .toLowerCase()
-      .replace(/\s+/g, '-')
-      .replace(/[^a-z0-9-]/g, '')
-      .replace(/-+/g, '-')
-      .replace(/^-+|-+$/g, '')
-  }
+          {/* Collections */}
+          <h2>Collections</h2>
 
-  return (
-    <>
-      <form onSubmit={addCollection} style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
-        <input
-          placeholder="Collection name (e.g., 1970s US States)"
-          value={newCol.name}
-          onChange={(e) => setNewCol({ ...newCol, name: e.target.value })}
-          required
-        />
+          <form onSubmit={addCollection} style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
+            <input
+              placeholder="Collection name (e.g., 1970s US States)"
+              value={newCol.name}
+              onChange={(e) => setNewCol({ ...newCol, name: e.target.value })}
+              required
+            />
 
-        <input
-          placeholder="Description (optional)"
-          value={newCol.description}
-          onChange={(e) => setNewCol({ ...newCol, description: e.target.value })}
-        />
+            <input
+              placeholder="Description (optional)"
+              value={newCol.description}
+              onChange={(e) => setNewCol({ ...newCol, description: e.target.value })}
+            />
 
-        <input
-          placeholder="Slug (e.g., 1970s-us-states)"
-          value={newCol.slug}
-          onChange={(e) => setNewCol({ ...newCol, slug: slugify(e.target.value) })}
-        />
+            <input
+              placeholder="Slug (e.g., 1970s-us-states)"
+              value={newCol.slug}
+              onChange={(e) => setNewCol({ ...newCol, slug: slugify(e.target.value) })}
+            />
 
-        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <input
-            type="checkbox"
-            checked={!!newCol.is_public}
-            onChange={(e) => setNewCol({ ...newCol, is_public: e.target.checked })}
-          />
-          Make this collection public
-        </label>
-
-        <button type="submit">Create collection</button>
-      </form>
-
-      {collections.length === 0 ? (
-        <p style={{ color: '#666', marginBottom: 16 }}>No collections yet.</p>
-      ) : (
-        <ul style={{ marginBottom: 16 }}>
-          {collections.map((c) => (
-            <li key={c.id}>
-              <strong><a href={`/c/${c.id}`}>{c.name}</a></strong>
-              {c.description ? ` — ${c.description}` : ''}
-              {c.is_public ? ' (public)' : ''}
-            </li>
-          ))}
-        </ul>
-      )}
-    </>
-  )
-})()}
-
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <input
+                type="checkbox"
+                checked={newCol.is_public}
+                onChange={(e) => setNewCol({ ...newCol, is_public: e.target.checked })}
+              />
               Make this collection public
             </label>
 
@@ -383,6 +328,7 @@ export default function Home() {
                 <li key={c.id}>
                   <strong><a href={`/c/${c.id}`}>{c.name}</a></strong>
                   {c.description ? ` — ${c.description}` : ''}
+                  {c.is_public ? ' (public)' : ''}
                 </li>
               ))}
             </ul>
@@ -438,7 +384,7 @@ export default function Home() {
               {p.is_public ? ' (public)' : ''}
             </span>
 
-            {collections.length > 0 && (
+            {collections.length > 0 && userId && (
               <div style={{ marginTop: 4 }}>
                 <select
                   value={selectedCollectionByPlate[p.id] || ''}
@@ -482,4 +428,3 @@ export default function Home() {
     </main>
   )
 }
-
