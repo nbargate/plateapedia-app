@@ -366,6 +366,7 @@ export default function Home() {
             </ul>
           )}
 
+
               Make this collection public
             </label>
 
