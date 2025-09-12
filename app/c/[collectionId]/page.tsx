@@ -27,6 +27,7 @@ export default function CollectionPage({ params }: any) {
   const [plates, setPlates] = useState<Plate[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState<string | null>(null) // holds plateId while removing
 
   useEffect(() => {
     const init = async () => {
@@ -58,65 +59,112 @@ export default function CollectionPage({ params }: any) {
       }
       setCollection(col as Collection)
 
-      // fetch plates via join table
+      await loadPlates(uid)
+      setLoading(false)
+    }
+
+    const loadPlates = async (uid: string) => {
       const { data: rows, error: rowsErr } = await supabase
         .from('plates_collections')
-        .select(
-          'plate:plates(id,country_code,region_code,year,serial,is_public)'
-        )
+        .select('plate:plates(id,country_code,region_code,year,serial,is_public)')
         .eq('collection_id', collectionId)
         .eq('owner_id', uid)
         .order('added_at', { ascending: false })
 
       if (rowsErr) {
-        setLoading(false)
         setError(rowsErr.message)
         return
       }
 
       const ps = (rows ?? []).map((r: any) => r.plate as Plate).filter(Boolean)
       setPlates(ps)
-      setLoading(false)
     }
 
     init()
-  }, [collectionId, supabase])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [collectionId])
+
+  async function removePlate(plateId: string) {
+    if (!userId) return
+    setBusy(plateId)
+    const { error } = await supabase
+      .from('plates_collections')
+      .delete()
+      .eq('plate_id', plateId)
+      .eq('collection_id', collectionId)
+      .eq('owner_id', userId)
+
+    if (error) {
+      alert(`Error removing plate: ${error.message}`)
+      setBusy(null)
+      return
+    }
+
+    // Optimistic UI update
+    setPlates((prev) => prev.filter((p) => p.id !== plateId))
+    setBusy(null)
+  }
 
   if (loading) {
-    return <main style={{ maxWidth: 720, margin: '40px auto', padding: 16 }}>
-      <p>Loading…</p>
-    </main>
+    return (
+      <main style={{ maxWidth: 720, margin: '40px auto', padding: 16 }}>
+        <p>Loading…</p>
+      </main>
+    )
   }
 
   if (error) {
-    return <main style={{ maxWidth: 720, margin: '40px auto', padding: 16 }}>
-      <p>{error}</p>
-    </main>
+    return (
+      <main style={{ maxWidth: 720, margin: '40px auto', padding: 16 }}>
+        <p>{error}</p>
+      </main>
+    )
   }
 
   if (!collection) {
-    return <main style={{ maxWidth: 720, margin: '40px auto', padding: 16 }}>
-      <p>Collection not found.</p>
-    </main>
+    return (
+      <main style={{ maxWidth: 720, margin: '40px auto', padding: 16 }}>
+        <p>Collection not found.</p>
+      </main>
+    )
   }
 
   return (
     <main style={{ maxWidth: 720, margin: '40px auto', padding: 16 }}>
-      <h1>{collection.name}</h1>
-      {collection.description && <p style={{ color: '#555' }}>{collection.description}</p>}
+      <p style={{ marginBottom: 8 }}>
+        <a href="/" style={{ textDecoration: 'none' }}>← Back</a>
+      </p>
 
-      <h2 style={{ marginTop: 24 }}>Plates in this collection</h2>
+      <h1>{collection.name}</h1>
+      {collection.description && (
+        <p style={{ color: '#555' }}>{collection.description}</p>
+      )}
+
+      <h2 style={{ marginTop: 24 }}>
+        Plates in this collection ({plates.length})
+      </h2>
+
       {plates.length === 0 ? (
         <p style={{ color: '#666' }}>No plates yet.</p>
       ) : (
         <ul>
           {plates.map((p) => (
-            <li key={p.id}>
-              {p.country_code}
-              {p.region_code ? `-${p.region_code}` : ''}
-              {p.year ? ` ${p.year}` : ''}
-              {p.serial ? ` — ${p.serial}` : ''}
-              {p.is_public ? ' (public)' : ''}
+            <li key={p.id} style={{ marginBottom: 6 }}>
+              <span>
+                {p.country_code}
+                {p.region_code ? `-${p.region_code}` : ''}
+                {p.year ? ` ${p.year}` : ''}
+                {p.serial ? ` — ${p.serial}` : ''}
+                {p.is_public ? ' (public)' : ''}
+              </span>
+              <button
+                onClick={() => removePlate(p.id)}
+                disabled={busy === p.id}
+                style={{ marginLeft: 10 }}
+                title="Remove from this collection"
+              >
+                {busy === p.id ? 'Removing…' : 'Remove'}
+              </button>
             </li>
           ))}
         </ul>
