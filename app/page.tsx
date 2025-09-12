@@ -303,6 +303,29 @@ export default function Home() {
               value={newCol.description}
               onChange={(e) => setNewCol({ ...newCol, description: e.target.value })}
             />
+            <input
+              placeholder="Slug (e.g., 1970s-us-states)"
+              value={newCol.slug}
+              onChange={(e) => {
+                const raw = e.target.value
+                const cleaned = raw
+                  .toLowerCase()
+                  .replace(/\s+/g, '-')        // spaces -> hyphen
+                  .replace(/[^a-z0-9-]/g, '')  // keep a–z 0–9 -
+                  .replace(/-+/g, '-')         // collapse ---
+                  .replace(/^-+|-+$/g, '')     // trim leading/trailing -
+                setNewCol({ ...newCol, slug: cleaned })
+              }}
+            />
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <input
+                type="checkbox"
+                checked={newCol.is_public}
+                onChange={(e) => setNewCol({ ...newCol, is_public: e.target.checked })}
+              />
+              Make this collection public
+            </label>
+
             <button type="submit">Create collection</button>
           </form>
 
