@@ -307,64 +307,62 @@ export default function Home() {
             </form>
           </div>
 
-          {/* Collections */}
           <h2>Collections</h2>
 
-          <form onSubmit={addCollection} style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
-            <input
-              placeholder="Collection name (e.g., 1970s US States)"
-              value={newCol.name}
-              onChange={(e) => setNewCol({ ...newCol, name: e.target.value })}
-              required
-            />
+<form onSubmit={addCollection} style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
+  <input
+    placeholder="Collection name (e.g., 1970s US States)"
+    value={newCol.name}
+    onChange={(e) => setNewCol({ ...newCol, name: e.target.value })}
+    required
+  />
 
-            <input
-              placeholder="Description (optional)"
-              value={newCol.description}
-              onChange={(e) => setNewCol({ ...newCol, description: e.target.value })}
-            />
+  <input
+    placeholder="Description (optional)"
+    value={newCol.description}
+    onChange={(e) => setNewCol({ ...newCol, description: e.target.value })}
+  />
 
-            {/* Optional: explicit slug (will be sanitized as you type) */}
-            <input
-              placeholder="Slug (e.g., 1970s-us-states)"
-              value={newCol.slug}
-              onChange={(e) => {
-                const raw = e.target.value
-                const cleaned = raw
-                  .toLowerCase()
-                  .replace(/\s+/g, '-')        // spaces -> hyphen
-                  .replace(/[^a-z0-9-]/g, '')  // keep a–z 0–9 -
-                  .replace(/-+/g, '-')         // collapse ---
-                  .replace(/^-+|-+$/g, '')     // trim leading/trailing -
-                setNewCol({ ...newCol, slug: cleaned })
-              }}
-            />
+  <input
+    placeholder="Slug (e.g., 1970s-us-states)"
+    value={newCol.slug}
+    onChange={(e) => {
+      const raw = e.target.value
+      const cleaned = raw
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '')
+        .replace(/-+/g, '-')
+        .replace(/^-+|-+$/g, '')
+      setNewCol({ ...newCol, slug: cleaned })
+    }}
+  />
 
-            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <input
-                type="checkbox"
-                checked={newCol.is_public}
-                onChange={(e) => setNewCol({ ...newCol, is_public: e.target.checked })}
-              />
-              Make this collection public
-            </label>
+  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+    <input
+      type="checkbox"
+      checked={newCol.is_public}
+      onChange={(e) => setNewCol({ ...newCol, is_public: e.target.checked })}
+    />
+    Make this collection public
+  </label>
 
-            <button type="submit">Create collection</button>
-          </form>
+  <button type="submit">Create collection</button>
+</form>
 
-          {collections.length === 0 ? (
-            <p style={{ color: '#666', marginBottom: 16 }}>No collections yet.</p>
-          ) : (
-            <ul style={{ marginBottom: 16 }}>
-              {collections.map((c) => (
-                <li key={c.id}>
-                  <strong><a href={`/c/${c.id}`}>{c.name}</a></strong>
-                  {c.description ? ` — ${c.description}` : ''}
-                  {c.is_public ? ' (public)' : ''}
-                </li>
-              ))}
-            </ul>
-          )}
+{collections.length === 0 ? (
+  <p style={{ color: '#666', marginBottom: 16 }}>No collections yet.</p>
+) : (
+  <ul style={{ marginBottom: 16 }}>
+    {collections.map((c) => (
+      <li key={c.id}>
+        <strong><a href={`/c/${c.id}`}>{c.name}</a></strong>
+        {c.description ? ` — ${c.description}` : ''}
+        {c.is_public ? ' (public)' : ''}
+      </li>
+    ))}
+  </ul>
+)}
 
 
               Make this collection public
