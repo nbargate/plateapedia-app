@@ -1,7 +1,5 @@
 'use client'
-
 import { useEffect, useState } from 'react'
-import SeoHead from '../components/SeoHead'
 import { getSupabaseBrowser } from '../lib/supabaseClient'
 
 type Plate = {
@@ -13,62 +11,38 @@ type Plate = {
   is_public: boolean
 }
 
-type Collection = {
-  id: string
-  name: string
-  description: string | null
-  slug?: string | null
-  is_public?: boolean
-}
-
 export default function Home() {
   const supabase = getSupabaseBrowser()
-
-  // auth + data state
   const [email, setEmail] = useState('')
   const [userId, setUserId] = useState<string | null>(null)
   const [plates, setPlates] = useState<Plate[]>([])
-  const [collections, setCollections] = useState<Collection[]>([])
-  const [selectedCollectionByPlate, setSelectedCollectionByPlate] = useState<Record<string, string>>({})
-
-  // plate form
   const [form, setForm] = useState({
     country_code: '',
     region_code: '',
     year: '',
     serial: '',
-    is_public: false,
+    is_public: false
   })
-
-  // messages
   const [msg, setMsg] = useState<string | null>(null)
 
-  // profile handle
+  // handle + profiles
   const [handle, setHandle] = useState<string>('')
   const [savingHandle, setSavingHandle] = useState(false)
 
-  // new collection form
-  const [newCol, setNewCol] = useState({ name: '', description: '', slug: '', is_public: false })
+  // collections
+  const [collections, setCollections] = useState<any[]>([])
+  const [newCol, setNewCol] = useState({ name: '', description: '' })
+  const [selectedCollectionByPlate, setSelectedCollectionByPlate] = useState<{ [key: string]: string }>({})
 
   useEffect(() => {
     const init = async () => {
       const { data } = await supabase.auth.getUser()
-      const uid = data.user?.id ?? null
-      setUserId(uid)
-
-      if (uid) {
-        // load handle
-        const { data: prof } = await supabase
-          .from('profiles')
-          .select('handle')
-          .eq('id', uid)
-          .single()
-        setHandle(prof?.handle ?? '')
-
-        await loadMyPlates()
-        await loadCollections()
+      setUserId(data.user?.id ?? null)
+      if (data.user) {
+        loadMyPlates()
+        loadCollections()
       } else {
-        await loadPublicPlates()
+        loadPublicPlates()
       }
     }
     init()
@@ -105,9 +79,11 @@ export default function Home() {
   }
 
   async function loadCollections() {
+    if (!userId) return
     const { data } = await supabase
       .from('collections')
-      .select('id,name,description,slug,is_public')
+      .select('id,name,description')
+      .eq('owner_id', userId)
       .order('created_at', { ascending: false })
     setCollections(data ?? [])
   }
@@ -135,7 +111,7 @@ export default function Home() {
       region_code: form.region_code.trim() || null,
       year: form.year ? Number(form.year) : null,
       serial: form.serial.trim() || null,
-      is_public: form.is_public,
+      is_public: form.is_public
     }
     const { error } = await supabase.from('plates').insert(payload)
     if (error) {
@@ -144,36 +120,6 @@ export default function Home() {
       setMsg('Saved ✅')
       setForm({ country_code: '', region_code: '', year: '', serial: '', is_public: false })
       loadMyPlates()
-    }
-  }
-
-  function slugify(s: string) {
-    return s
-      .toLowerCase()
-      .replace(/\s+/g, '-')
-      .replace(/[^a-z0-9-]/g, '')
-      .replace(/-+/g, '-')
-      .replace(/^-+|-+$/g, '')
-  }
-
-  async function saveHandle(e: React.FormEvent) {
-    e.preventDefault()
-    if (!userId) return
-    const clean = slugify(handle)
-    if (!clean) {
-      alert('Please enter a valid handle.')
-      return
-    }
-    setSavingHandle(true)
-    const { error } = await supabase.from('profiles').update({ handle: clean }).eq('id', userId)
-    setSavingHandle(false)
-    if (error) {
-      // @ts-ignore
-      if (error.code === '23505') alert('That handle is already taken. Try another.')
-      else alert(`Error saving handle: ${error.message}`)
-    } else {
-      setHandle(clean)
-      alert('Handle saved ✅')
     }
   }
 
@@ -186,199 +132,163 @@ export default function Home() {
     const name = newCol.name.trim()
     const description = newCol.description.trim()
     if (!name) return
-
-    const baseForSlug = newCol.slug?.trim() || name
-    const slug = slugify(baseForSlug)
-
     const { error } = await supabase.from('collections').insert({
       owner_id: userId,
       name,
       description: description || null,
-      slug,
-      is_public: !!newCol.is_public,
     })
     if (error) {
       setMsg(`Error creating collection: ${error.message}`)
     } else {
       setMsg('Collection saved ✅')
-      setNewCol({ name: '', description: '', slug: '', is_public: false })
+      setNewCol({ name: '', description: '' })
       loadCollections()
     }
   }
 
   async function assignPlateToCollection(plateId: string, collectionId: string) {
-    if (!userId) {
-      const m = 'Please sign in first.'
-      setMsg(m)
-      alert(m)
-      return
-    }
     const { error } = await supabase.from('plates_collections').insert({
       plate_id: plateId,
       collection_id: collectionId,
-      owner_id: userId,
     })
     if (error) {
-      // @ts-ignore
-      if (error.code === '23505') {
-        const m = 'That plate is already in this collection.'
-        setMsg(m)
-        alert(m)
-      } else {
-        const m = `Error assigning to collection: ${error.message}`
-        setMsg(m)
-        alert(m)
-      }
+      setMsg(`Error assigning plate: ${error.message}`)
     } else {
-      const m = 'Plate added to collection ✅'
-      setMsg(m)
-      alert(m)
+      setMsg('Plate added to collection ✅')
     }
   }
 
   return (
-    <>
-      <SeoHead
-        title="Home"
-        description="Track and share license plate collections on Plateapedia."
-        canonicalPath="/"
-      />
+    <main style={{ maxWidth: 720, margin: '40px auto', padding: 16 }}>
+      <h1>Plateapedia (MVP)</h1>
 
-      <main style={{ maxWidth: 720, margin: '40px auto', padding: 16 }}>
-        <h1>Plateapedia (MVP)</h1>
+      {/* Sign in */}
+      {!userId ? (
+        <section style={{ marginBottom: 32, paddingBottom: 16, borderBottom: '1px solid #ddd' }}>
+          <h2>Sign in</h2>
+          <form onSubmit={signInWithEmail} style={{ display: 'flex', gap: 8 }}>
+            <input
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              style={{ flex: 1, padding: 8 }}
+              required
+            />
+            <button type="submit">Send magic link</button>
+          </form>
+        </section>
+      ) : (
+        <section style={{ marginBottom: 32, paddingBottom: 16, borderBottom: '1px solid #ddd' }}>
+          <p>Signed in. <button onClick={signOut}>Sign out</button></p>
 
-        {!userId ? (
-          <section>
-            <h2>Sign in</h2>
-            <form onSubmit={signInWithEmail} style={{ display: 'flex', gap: 8 }}>
+          {/* Handle + public link */}
+          <div style={{ margin: '8px 0 16px 0' }}>
+            {handle ? (
+              <p style={{ marginBottom: 8 }}>
+                Your public page: <a href={`/u/${handle}`}>{`/u/${handle}`}</a>
+              </p>
+            ) : (
+              <p style={{ marginBottom: 8, color: '#666' }}>
+                Choose a handle to get your public link.
+              </p>
+            )}
+            <form onSubmit={async (e) => {
+              e.preventDefault()
+              if (!userId) return
+              if (!handle.trim()) return
+              setSavingHandle(true)
+              const { error } = await supabase
+                .from('profiles')
+                .update({ handle: handle.trim() })
+                .eq('id', userId)
+              setSavingHandle(false)
+              if (error) alert(`Error saving handle: ${error.message}`)
+              else alert('Handle saved ✅')
+            }} style={{ display: 'flex', gap: 8 }}>
               <input
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Choose a handle (e.g., nathan)"
+                value={handle}
+                onChange={(e) => setHandle(e.target.value)}
                 style={{ flex: 1, padding: 8 }}
                 required
               />
-              <button type="submit">Send magic link</button>
+              <button type="submit" disabled={savingHandle}>
+                {savingHandle ? 'Saving…' : 'Save handle'}
+              </button>
             </form>
-          </section>
-        ) : (
-          <section>
-            <p>Signed in. <button onClick={signOut}>Sign out</button></p>
+          </div>
 
-            {/* Handle + public link */}
-            <div style={{ margin: '8px 0 16px 0' }}>
-              {handle ? (
-                <p style={{ marginBottom: 8 }}>
-                  Your public page: <a href={`/u/${handle}`}>{`/u/${handle}`}</a>
-                </p>
-              ) : (
-                <p style={{ marginBottom: 8, color: '#666' }}>
-                  Choose a handle to get your public link.
-                </p>
-              )}
+          {/* Collections */}
+          <h2>Collections</h2>
+          <form onSubmit={addCollection} style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
+            <input
+              placeholder="Collection name (e.g., 1970s US States)"
+              value={newCol.name}
+              onChange={(e) => setNewCol({ ...newCol, name: e.target.value })}
+              required
+            />
+            <input
+              placeholder="Description (optional)"
+              value={newCol.description}
+              onChange={(e) => setNewCol({ ...newCol, description: e.target.value })}
+            />
+            <button type="submit">Create collection</button>
+          </form>
 
-              <form onSubmit={saveHandle} style={{ display: 'flex', gap: 8 }}>
-                <input
-                  placeholder="Choose a handle (e.g., nathan)"
-                  value={handle}
-                  onChange={(e) => setHandle(e.target.value)}
-                  style={{ flex: 1, padding: 8 }}
-                  required
-                />
-                <button type="submit" disabled={savingHandle}>
-                  {savingHandle ? 'Saving…' : 'Save handle'}
-                </button>
-              </form>
-            </div>
+          {collections.length === 0 ? (
+            <p style={{ color: '#666', marginBottom: 16 }}>No collections yet.</p>
+          ) : (
+            <ul style={{ marginBottom: 16 }}>
+              {collections.map((c) => (
+                <li key={c.id}>
+                  <strong>{c.name}</strong>
+                  {c.description ? ` — ${c.description}` : ''}
+                </li>
+              ))}
+            </ul>
+          )}
 
-            {/* Collections */}
-            <h2>Collections</h2>
-
-            <form onSubmit={addCollection} style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
+          {/* Add a plate */}
+          <h2>Add a plate</h2>
+          <form onSubmit={addPlate} style={{ display: 'grid', gap: 8 }}>
+            <input
+              placeholder="Country code (e.g., US, CA, DE)"
+              value={form.country_code}
+              onChange={(e) => setForm({ ...form, country_code: e.target.value })}
+              required
+            />
+            <input
+              placeholder="Region/state (e.g., NY)"
+              value={form.region_code}
+              onChange={(e) => setForm({ ...form, region_code: e.target.value })}
+            />
+            <input
+              type="number"
+              placeholder="Year"
+              value={form.year}
+              onChange={(e) => setForm({ ...form, year: e.target.value })}
+            />
+            <input
+              placeholder="Serial"
+              value={form.serial}
+              onChange={(e) => setForm({ ...form, serial: e.target.value })}
+            />
+            <label>
               <input
-                placeholder="Collection name (e.g., 1970s US States)"
-                value={newCol.name}
-                onChange={(e) => setNewCol({ ...newCol, name: e.target.value })}
-                required
-              />
+                type="checkbox"
+                checked={form.is_public}
+                onChange={(e) => setForm({ ...form, is_public: e.target.checked })}
+              />{' '}
+              Public
+            </label>
+            <button type="submit">Save plate</button>
+          </form>
+        </section>
+      )}
 
-              <input
-                placeholder="Description (optional)"
-                value={newCol.description}
-                onChange={(e) => setNewCol({ ...newCol, description: e.target.value })}
-              />
-
-              <input
-                placeholder="Slug (e.g., 1970s-us-states)"
-                value={newCol.slug}
-                onChange={(e) => setNewCol({ ...newCol, slug: slugify(e.target.value) })}
-              />
-
-              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <input
-                  type="checkbox"
-                  checked={newCol.is_public}
-                  onChange={(e) => setNewCol({ ...newCol, is_public: e.target.checked })}
-                />
-                Make this collection public
-              </label>
-
-              <button type="submit">Create collection</button>
-            </form>
-
-            {collections.length === 0 ? (
-              <p style={{ color: '#666', marginBottom: 16 }}>No collections yet.</p>
-            ) : (
-              <ul style={{ marginBottom: 16 }}>
-                {collections.map((c) => (
-                  <li key={c.id}>
-                    <strong><a href={`/c/${c.id}`}>{c.name}</a></strong>
-                    {c.description ? ` — ${c.description}` : ''}
-                    {c.is_public ? ' (public)' : ''}
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            {/* Add a plate */}
-            <h2>Add a plate</h2>
-            <form onSubmit={addPlate} style={{ display: 'grid', gap: 8 }}>
-              <input
-                placeholder="Country code (e.g., US, CA, DE)"
-                value={form.country_code}
-                onChange={(e) => setForm({ ...form, country_code: e.target.value })}
-                required
-              />
-              <input
-                placeholder="Region/state (e.g., NY)"
-                value={form.region_code}
-                onChange={(e) => setForm({ ...form, region_code: e.target.value })}
-              />
-              <input
-                type="number"
-                placeholder="Year"
-                value={form.year}
-                onChange={(e) => setForm({ ...form, year: e.target.value })}
-              />
-              <input
-                placeholder="Serial"
-                value={form.serial}
-                onChange={(e) => setForm({ ...form, serial: e.target.value })}
-              />
-              <label>
-                <input
-                  type="checkbox"
-                  checked={form.is_public}
-                  onChange={(e) => setForm({ ...form, is_public: e.target.checked })}
-                />{' '}
-                Public
-              </label>
-              <button type="submit">Save plate</button>
-            </form>
-          </section>
-        )}
-
+      {/* Plates list */}
+      <section style={{ marginBottom: 32, paddingBottom: 16 }}>
         <h2 style={{ marginTop: 32 }}>{userId ? 'My plates' : 'Recent public plates'}</h2>
         <ul>
           {plates.map((p) => (
@@ -391,7 +301,8 @@ export default function Home() {
                 {p.is_public ? ' (public)' : ''}
               </span>
 
-              {collections.length > 0 && userId && (
+              {/* Collection assign */}
+              {collections.length > 0 && (
                 <div style={{ marginTop: 4 }}>
                   <select
                     value={selectedCollectionByPlate[p.id] || ''}
@@ -430,9 +341,10 @@ export default function Home() {
             </li>
           ))}
         </ul>
+      </section>
 
-        {msg && <p style={{ marginTop: 16 }}>{msg}</p>}
-      </main>
-    </>
+      {msg && <p style={{ marginTop: 16 }}>{msg}</p>}
+    </main>
   )
 }
+ß
