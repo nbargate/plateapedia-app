@@ -1,4 +1,5 @@
 'use client'
+
 import { useEffect, useState } from 'react'
 import { getSupabaseBrowser } from '../../../lib/supabaseClient'
 
@@ -8,86 +9,142 @@ type Plate = {
   region_code: string | null
   year: number | null
   serial: string | null
+  is_public: boolean
 }
 
-type Profile = {
+type Collection = {
   id: string
-  handle: string | null
-  display_name: string | null
-  is_public: boolean | null
+  name: string
+  description: string | null
+  slug: string | null
+  is_public: boolean
 }
 
-export default function HandlePublicPage({ params }: any) {
+export default function PublicProfilePage({ params }: any) {
   const supabase = getSupabaseBrowser()
-  const handle = params.handle as string
+  const handle: string = params?.handle
 
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [plates, setPlates] = useState<Plate[]>([])
-  const [status, setStatus] = useState<'loading' | 'notfound' | 'private' | 'ready'>('loading')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [ownerId, setOwnerId] = useState<string | null>(null)
+  const [publicPlates, setPublicPlates] = useState<Plate[]>([])
+  const [publicCollections, setPublicCollections] = useState<Collection[]>([])
 
   useEffect(() => {
-    const load = async () => {
-      // 1) Look up the profile by handle
-      const { data: prof } = await supabase
+    const run = async () => {
+      setLoading(true)
+      setError(null)
+
+      // 1) Resolve handle -> owner id
+      const { data: prof, error: profErr } = await supabase
         .from('profiles')
-        .select('id,handle,display_name,is_public')
-        .ilike('handle', handle) // case-insensitive match
+        .select('id, handle')
+        .ilike('handle', handle)
         .single()
 
-
-      if (!prof) {
-        setStatus('notfound')
+      if (profErr || !prof) {
+        setError('User not found.')
+        setLoading(false)
         return
       }
-      if (prof.is_public === false) {
-        setStatus('private')
-        return
-      }
+      const uid = prof.id as string
+      setOwnerId(uid)
 
-      setProfile(prof)
-
-      // 2) Load that user's public plates
-      const { data: pubs } = await supabase
-        .from('plates')
-        .select('id,country_code,region_code,year,serial')
-        .eq('owner_id', prof.id)
+      // 2) Load public collections for this owner
+      const { data: cols, error: colsErr } = await supabase
+        .from('collections')
+        .select('id,name,description,slug,is_public')
+        .eq('owner_id', uid)
         .eq('is_public', true)
         .order('created_at', { ascending: false })
 
-      setPlates(pubs ?? [])
-      setStatus('ready')
+      if (colsErr) {
+        setError(colsErr.message)
+        setLoading(false)
+        return
+      }
+      setPublicCollections(cols ?? [])
+
+      // 3) Load public plates for this owner (optional: show latest)
+      const { data: plates, error: platesErr } = await supabase
+        .from('plates')
+        .select('id,country_code,region_code,year,serial,is_public')
+        .eq('is_public', true)
+        .eq('owner_id', uid)
+        .order('created_at', { ascending: false })
+        .limit(20)
+
+      if (platesErr) {
+        setError(platesErr.message)
+        setLoading(false)
+        return
+      }
+
+      setPublicPlates(plates ?? [])
+      setLoading(false)
     }
 
-    load()
+    run()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handle])
 
-  if (status === 'loading') {
-    return <main style={{ maxWidth: 720, margin: '40px auto', padding: 16 }}>Loading…</main>
+  if (loading) {
+    return (
+      <main style={{ maxWidth: 720, margin: '40px auto', padding: 16 }}>
+        <p>Loading…</p>
+      </main>
+    )
   }
-  if (status === 'notfound') {
-    return <main style={{ maxWidth: 720, margin: '40px auto', padding: 16 }}>
-      <h1>Profile not found</h1>
-      <p>No user with handle <code>{handle}</code>.</p>
-    </main>
+
+  if (error) {
+    return (
+      <main style={{ maxWidth: 720, margin: '40px auto', padding: 16 }}>
+        <p>{error}</p>
+      </main>
+    )
   }
-  if (status === 'private') {
-    return <main style={{ maxWidth: 720, margin: '40px auto', padding: 16 }}>
-      <h1>Profile is private</h1>
-      <p>This user’s profile isn’t public.</p>
-    </main>
+
+  if (!ownerId) {
+    return (
+      <main style={{ maxWidth: 720, margin: '40px auto', padding: 16 }}>
+        <p>User not found.</p>
+      </main>
+    )
   }
 
   return (
     <main style={{ maxWidth: 720, margin: '40px auto', padding: 16 }}>
-      <h1>{profile?.display_name || profile?.handle || 'Collector'}</h1>
-      <p style={{ color: '#666' }}>@{profile?.handle}</p>
+      <p style={{ marginBottom: 8 }}>
+        <a href="/" style={{ textDecoration: 'none' }}>← Back</a>
+      </p>
 
-      {plates.length === 0 ? (
-        <p>No public plates yet.</p>
+      <h1 style={{ marginBottom: 8 }}>/u/{handle}</h1>
+
+      <h2>Public collections</h2>
+      {publicCollections.length === 0 ? (
+        <p style={{ color: '#666', marginBottom: 16 }}>No public collections yet.</p>
+      ) : (
+        <ul style={{ marginBottom: 24 }}>
+          {publicCollections.map((c) => (
+            <li key={c.id} style={{ marginBottom: 6 }}>
+              {c.slug ? (
+                <strong><a href={`/u/${handle}/${c.slug}`}>{c.name}</a></strong>
+              ) : (
+                <strong>{c.name}</strong>
+              )}
+              {c.description ? ` — ${c.description}` : ''}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <h2>Recent public plates</h2>
+      {publicPlates.length === 0 ? (
+        <p style={{ color: '#666' }}>No public plates yet.</p>
       ) : (
         <ul>
-          {plates.map((p) => (
-            <li key={p.id}>
+          {publicPlates.map((p) => (
+            <li key={p.id} style={{ marginBottom: 6 }}>
               {p.country_code}
               {p.region_code ? `-${p.region_code}` : ''}
               {p.year ? ` ${p.year}` : ''}
