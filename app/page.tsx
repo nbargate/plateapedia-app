@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { getSupabaseBrowser } from '../lib/supabaseClient'
+import SeoHead from '../components/SeoHead'
+
 
 type Plate = {
   id: string
@@ -237,6 +239,12 @@ export default function Home() {
   }
 
   return (
+  <>
+    <SeoHead
+      title="Home"
+      description="Track and share license plate collections on Plateapedia."
+      />
+
     <main style={{ maxWidth: 720, margin: '40px auto', padding: 16 }}>
       <h1>Plateapedia (MVP)</h1>
 
