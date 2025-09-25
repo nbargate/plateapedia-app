@@ -18,10 +18,9 @@ function toYMD(d?: string | null) {
 export async function GET() {
   const supabase = createClient(url, anon, { auth: { persistSession: false } })
 
-  // Try to read timestamps; if the table doesn't have them, fall back to handle-only.
   let rows: { handle: string; lastmod: string }[] = []
 
-  // Attempt 1: with timestamps
+  // Try with timestamps first
   const tryWithTimestamps = await supabase
     .from('profiles')
     .select('handle, updated_at, created_at')
@@ -35,7 +34,7 @@ export async function GET() {
       }))
       .filter((r) => !!r.handle)
   } else {
-    // Attempt 2: no timestamps available (or RLS blocked fields). Use handle only.
+    // Fallback: handle only
     const tryHandlesOnly = await supabase
       .from('profiles')
       .select('handle')
@@ -47,17 +46,14 @@ export async function GET() {
         .map((p: any) => ({ handle: String(p.handle || '').trim(), lastmod: today }))
         .filter((r) => !!r.handle)
     } else {
-      // Still blocked/error -> return an empty but valid sitemap
-      return new Response(
-        `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>`,
-        {
-          headers: {
-            'Content-Type': 'application/xml; charset=utf-8',
-            'Cache-Control': 'public, max-age=86400',
-          },
-          status: 200,
-        }
-      )
+      const empty = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>`
+      return new Response(empty, {
+        headers: {
+          'Content-Type': 'application/xml; charset=utf-8',
+          'Cache-Control': 'public, max-age=86400',
+        },
+        status: 200,
+      })
     }
   }
 

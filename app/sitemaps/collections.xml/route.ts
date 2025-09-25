@@ -18,7 +18,6 @@ function toYMD(d?: string | null) {
 export async function GET() {
   const supabase = createClient(url, anon, { auth: { persistSession: false } })
 
-  // Public collections only, need slug + owner's handle + timestamps for lastmod
   const { data, error } = await supabase
     .from('collections')
     .select(`
@@ -31,19 +30,24 @@ export async function GET() {
     .eq('is_public', true)
 
   if (error) {
-    return new Response(
-      `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>`,
-      { headers: { 'Content-Type': 'application/xml; charset=utf-8' }, status: 200 }
-    )
+    const empty = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>`
+    return new Response(empty, {
+      headers: {
+        'Content-Type': 'application/xml; charset=utf-8',
+        'Cache-Control': 'public, max-age=86400',
+      },
+      status: 200,
+    })
   }
 
-  const rows = (data ?? [])
-    .filter((r: any) => r?.slug && r?.owner?.handle)
-    .map((r: any) => ({
-      handle: String(r.owner.handle).trim(),
-      slug: String(r.slug).trim(),
-      lastmod: toYMD(r.updated_at ?? r.created_at),
-    }))
+  const rows =
+    (data ?? [])
+      .filter((r: any) => r?.slug && r?.owner?.handle)
+      .map((r: any) => ({
+        handle: String(r.owner.handle).trim(),
+        slug: String(r.slug).trim(),
+        lastmod: toYMD(r.updated_at ?? r.created_at),
+      }))
 
   const body = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
