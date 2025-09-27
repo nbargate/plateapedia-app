@@ -2,6 +2,31 @@
 import { useEffect, useState } from 'react'
 import { getSupabaseBrowser } from '../lib/supabaseClient'
 
+// --- UI helpers (minimal) ---
+const ui = {
+  section: { marginBottom: 32, paddingBottom: 16, borderBottom: '1px solid #ddd' },
+  input:   { padding: 8 as const, border: '1px solid #ccc', borderRadius: 4 as const },
+  button:  { padding: '8px 12px', border: '1px solid #ccc', borderRadius: 4 as const, background: '#f7f7f7', cursor: 'pointer' as const },
+  buttonDisabled: { opacity: 0.6, cursor: 'not-allowed' as const },
+  h2: { margin: '0 0 12px 0' },
+}
+
+function Button(props: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  const { style, disabled, ...rest } = props
+  return (
+    <button
+      {...rest}
+      disabled={disabled}
+      style={{
+        ...ui.button,
+        ...(disabled ? ui.buttonDisabled : {}),
+        ...(style || {}),
+      }}
+    />
+  )
+}
+
+
 type Plate = {
   id: string
   country_code: string
@@ -172,11 +197,12 @@ export default function Home() {
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              style={{ flex: 1, padding: 8 }}
+              style={{ flex: 1, ...ui.input }}
               required
             />
-            <button type="submit">Send magic link</button>
+            <Button type="submit">Send magic link</Button>
           </form>
+
         </section>
       ) : (
         <section style={{ marginBottom: 32, paddingBottom: 16, borderBottom: '1px solid #ddd' }}>
