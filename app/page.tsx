@@ -26,6 +26,11 @@ function Button(props: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   )
 }
 
+function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
+  const { style, ...rest } = props
+  return <input {...rest} style={{ ...ui.input, ...(style || {}) }} />
+}
+
 
 type Plate = {
   id: string
@@ -219,29 +224,35 @@ export default function Home() {
                 Choose a handle to get your public link.
               </p>
             )}
-            <form onSubmit={async (e) => {
-              e.preventDefault()
-              if (!userId) return
-              if (!handle.trim()) return
-              setSavingHandle(true)
-              const { error } = await supabase
-                .from('profiles')
-                .update({ handle: handle.trim() })
-                .eq('id', userId)
-              setSavingHandle(false)
-              if (error) alert(`Error saving handle: ${error.message}`)
-              else alert('Handle saved ✅')
-            }} style={{ display: 'flex', gap: 8 }}>
-              <input
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!userId) return;
+                if (!handle.trim()) return;
+                setSavingHandle(true);
+                const { error } = await supabase
+                  .from('profiles')
+                  .update({ handle: handle.trim() })
+                  .eq('id', userId);
+                setSavingHandle(false);
+                if (error) {
+                  alert(`Error saving handle: ${error.message}`);
+                } else {
+                  alert('Handle saved ✅');
+                }
+              }}
+              style={{ display: 'flex', gap: 8 }}
+            >
+              <Input
                 placeholder="Choose a handle (e.g., nathan)"
                 value={handle}
                 onChange={(e) => setHandle(e.target.value)}
-                style={{ flex: 1, padding: 8 }}
                 required
+                style={{ flex: 1 }}
               />
-              <button type="submit" disabled={savingHandle}>
+              <Button type="submit" disabled={savingHandle}>
                 {savingHandle ? 'Saving…' : 'Save handle'}
-              </button>
+              </Button>
             </form>
           </div>
 
@@ -277,38 +288,39 @@ export default function Home() {
 
           {/* Add a plate */}
           <h2>Add a plate</h2>
+          <h2>Add a plate</h2>
           <form onSubmit={addPlate} style={{ display: 'grid', gap: 8 }}>
-            <input
+            <Input
               placeholder="Country code (e.g., US, CA, DE)"
               value={form.country_code}
               onChange={(e) => setForm({ ...form, country_code: e.target.value })}
               required
             />
-            <input
+            <Input
               placeholder="Region/state (e.g., NY)"
               value={form.region_code}
               onChange={(e) => setForm({ ...form, region_code: e.target.value })}
             />
-            <input
+            <Input
               type="number"
               placeholder="Year"
               value={form.year}
-              onChange={(e) => setForm({ ...form, year: e.target.value })}
+              onChange={(e) => setForm({ ...form, year: (e.target as HTMLInputElement).value })}
             />
-            <input
+            <Input
               placeholder="Serial"
               value={form.serial}
               onChange={(e) => setForm({ ...form, serial: e.target.value })}
             />
-            <label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <input
                 type="checkbox"
                 checked={form.is_public}
                 onChange={(e) => setForm({ ...form, is_public: e.target.checked })}
-              />{' '}
+              />
               Public
             </label>
-            <button type="submit">Save plate</button>
+            <Button type="submit">Save plate</Button>
           </form>
         </section>
       )}
