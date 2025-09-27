@@ -63,6 +63,8 @@ export default function Home() {
   const [collections, setCollections] = useState<any[]>([])
   const [newCol, setNewCol] = useState({ name: '', description: '' })
   const [selectedCollectionByPlate, setSelectedCollectionByPlate] = useState<{ [key: string]: string }>({})
+  const [newColIsPublic, setNewColIsPublic] = useState(false)
+
 
   useEffect(() => {
     const init = async () => {
@@ -166,14 +168,18 @@ export default function Home() {
       owner_id: userId,
       name,
       description: description || null,
+      is_public: newColIsPublic,
     })
     if (error) {
       setMsg(`Error creating collection: ${error.message}`)
-    } else {
-      setMsg('Collection saved ✅')
-      setNewCol({ name: '', description: '' })
-      loadCollections()
-    }
+      } else {
+        setMsg('Collection saved ✅')
+        setNewCol({ name: '', description: '' })
+        setNewColIsPublic(false)   // ✅ reset the "public" checkbox
+        loadCollections()
+      }
+  }
+
   }
 
   async function assignPlateToCollection(plateId: string, collectionId: string) {
@@ -259,19 +265,28 @@ export default function Home() {
           {/* Collections */}
           <h2>Collections</h2>
           <form onSubmit={addCollection} style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
-            <input
+            <Input
               placeholder="Collection name (e.g., 1970s US States)"
               value={newCol.name}
               onChange={(e) => setNewCol({ ...newCol, name: e.target.value })}
               required
             />
-            <input
+            <Input
               placeholder="Description (optional)"
               value={newCol.description}
               onChange={(e) => setNewCol({ ...newCol, description: e.target.value })}
             />
-            <button type="submit">Create collection</button>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                type="checkbox"
+                checked={newColIsPublic}
+                onChange={(e) => setNewColIsPublic(e.target.checked)}
+              />
+              Make this collection public
+            </label>
+            <Button type="submit">Create collection</Button>
           </form>
+
 
           {collections.length === 0 ? (
             <p style={{ color: '#666', marginBottom: 16 }}>No collections yet.</p>
@@ -287,7 +302,6 @@ export default function Home() {
           )}
 
           {/* Add a plate */}
-          <h2>Add a plate</h2>
           <h2>Add a plate</h2>
           <form onSubmit={addPlate} style={{ display: 'grid', gap: 8 }}>
             <Input
