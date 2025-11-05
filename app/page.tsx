@@ -192,7 +192,6 @@ export default function Home() {
     } else {
       setMsg('Plate added to collection ✅')
     }
-  }
 
   return (
     <main style={{ maxWidth: 720, margin: '40px auto', padding: 16 }}>
